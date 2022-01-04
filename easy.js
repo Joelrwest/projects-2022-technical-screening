@@ -31,8 +31,59 @@ var assert = require("assert")
 // Explanation: Empty array...
 
 const altNumbers = (numArray) => {
-    // TODO: COMPLETE THIS FUNCTION
-    return [];
+    // Note that I haven't even used JavaScript before - I'm sure my style is massively off or I've missed something
+
+    // My general idea is to iterate through numArray and make two new arrays
+    // - One that has all the positive numbers + zero
+    // - One that has all the negative numbers
+    let pos = [];
+    let neg = [];
+
+    // Iterate through the given array, and add the items to 'pos' and 'neg' respectively
+    for (let i = 0; i < numArray.length; i++) {
+        if (numArray[i] >= 0) {
+            // It's positive or zero, add to 'pos'
+            pos.push(numArray[i]);
+        } else {
+            // Must be negative if it gets here
+            neg.push(numArray[i]);
+        }
+    }
+
+    // Now that we have the two arrays, check if the lengths are within one of each other.
+    // If they're not, we have a problem since there's no way for them to alternate -> throw some error
+    const length_diff = Math.abs(pos.length - neg.length);
+    if (length_diff > 1) {
+        throw new Error("The positive/negative numbers are imbalanced by more than 1. Number of positives = " + String(pos.length) + ". Number of negatives = " + String(neg.length) + ".");
+    }
+
+    // Cool, it's a valid input.
+    // Make a new, empty array and iterate through the positive and negative arrays, adding an element from each alternately
+
+    // Importantly, if there are more positive numbers, we must start with a positive number.
+    // If there are more negative numbers, we must start with a negative number.
+    // If there are equal amounts of positive and negative numbers, don't care which starts. Default to positive.
+    let ans = [];
+    let next_is_pos = (pos.length >= neg.length);
+    let pos_counter = 0;
+    let neg_counter = 0;
+    while (ans.length != numArray.length) {
+        if (next_is_pos) {
+            // Add a positive
+            ans.push(pos[pos_counter]);
+            pos_counter++;
+        } else {
+            // Add a negative
+            ans.push(neg[neg_counter]);
+            neg_counter++;
+        }
+        
+        // Change next_is_pos to whatever it isn't
+        next_is_pos = !next_is_pos;
+    }
+
+    // Yay done, return it
+    return ans;
 }
 
 module.exports = { altNumbers } // Do not modify this line
