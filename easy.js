@@ -33,13 +33,13 @@ var assert = require("assert")
 const altNumbers = (numArray) => {
     // Note that I haven't even used JavaScript before - I'm sure my style is massively off or I've missed something
 
-    // My general idea is to iterate through numArray and make two new arrays
-    // - One that has all the positive numbers + zero
-    // - One that has all the negative numbers
+    // Idea is to iterate through numArray add elements to two new arrays:
+    //  - One that has all the positive numbers + zero
+    //  - One that has all the negative numbers
     let pos = [];
     let neg = [];
 
-    // Iterate through the given array, and add the items to 'pos' and 'neg' respectively
+    // Iterate through numArray
     for (let i = 0; i < numArray.length; i++) {
         if (numArray[i] >= 0) {
             // It's positive or zero, add to 'pos'
@@ -50,36 +50,37 @@ const altNumbers = (numArray) => {
         }
     }
 
-    // Now that we have the two arrays, check if the lengths are within one of each other.
-    // If they're not, we have a problem since there's no way for them to alternate -> throw some error
-    const length_diff = Math.abs(pos.length - neg.length);
-    if (length_diff > 1) {
-        throw new Error("The positive/negative numbers are imbalanced by more than 1. Number of positives = " + String(pos.length) + ". Number of negatives = " + String(neg.length) + ".");
+    // Check if the lengths are within one of each other.
+    // If they're not, there's a problem since it's impossible for them to alternate -> throw some error
+    const lengthDiff = Math.abs(pos.length - neg.length);
+    if (lengthDiff > 1) {
+        throw new Error("The positive/negative numbers are imbalanced by more than 1. #positives = " + String(pos.length) + ", #negatives = " + String(neg.length));
     }
 
     // Cool, it's a valid input.
-    // Make a new, empty array and iterate through the positive and negative arrays, adding an element from each alternately
-
-    // Importantly, if there are more positive numbers, we must start with a positive number.
+    
+    // If there are more positive numbers, we must start with a positive number.
     // If there are more negative numbers, we must start with a negative number.
-    // If there are equal amounts of positive and negative numbers, don't care which starts. Default to positive.
+    // If there are equal amounts of positive and negative numbers, we don't care which starts. Default to positive.    
+    let nextIsPos = (pos.length >= neg.length);
+
+    // Make a new, empty array and iterate through the pos and neg arrays
     let ans = [];
-    let next_is_pos = (pos.length >= neg.length);
-    let pos_counter = 0;
-    let neg_counter = 0;
+    let posCounter = 0;
+    let negCounter = 0;
     while (ans.length != numArray.length) {
-        if (next_is_pos) {
+        if (nextIsPos) {
             // Add a positive
-            ans.push(pos[pos_counter]);
-            pos_counter++;
+            ans.push(pos[posCounter]);
+            posCounter++;
         } else {
             // Add a negative
-            ans.push(neg[neg_counter]);
-            neg_counter++;
+            ans.push(neg[negCounter]);
+            negCounter++;
         }
         
-        // Change next_is_pos to whatever it isn't
-        next_is_pos = !next_is_pos;
+        // Flip nextIsPos to whatever it isn't
+        nextIsPos = !nextIsPos;
     }
 
     // Yay done, return it
@@ -140,4 +141,20 @@ array6 = altNumbers(array6)
 const answer6 = [-1, 5, -2, 0, -3, 3, -4]
 for (let i = 0; i < array6.length; i++) {
     assert(array6[i] === answer6[i])
+}
+
+// My own tests that're built to fail.
+// Has unbalanced number of positives and negatives.
+let array7 = [5,-1,-2,-3,4,0,3,7]
+try {
+    array7 = altNumbers(array7)
+} catch (error) {
+    console.log("As expected, altNumbers failed with error on array7. " + error + "\n");
+}
+
+let array8 = [-5,9,-1,-2,-3,-4,0,3]
+try {
+    array8 = altNumbers(array8)
+} catch (error) {
+    console.log("As expected, altNumbers failed with error on array8. " + error + "\n");
 }
