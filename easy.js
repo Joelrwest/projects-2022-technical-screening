@@ -1,8 +1,8 @@
 var assert = require("assert")
 // Given an array of numbers, return a new array so that positive and negative
 // numbers alternate. You can assume that 0 is a positive number. Within the
-// positive and negative numbers, you must keep their relative order. You are 
-// guaranteed the number of positive and negative numbers will not differ by more 
+// positive and negative numbers, you must keep their relative order. You are
+// guaranteed the number of positive and negative numbers will not differ by more
 // than 1.
 
 // =====Example 1
@@ -37,8 +37,8 @@ var assert = require("assert")
 const altNumbers = (numArray) => {
     // Create two new arrays, one for positives and one for negatives.
     // Make it in reverse order for later
-    const pos = numArray.filter(num => num >= 0).reverse();
-    const neg = numArray.filter(num => num < 0).reverse();
+    let pos = numArray.filter(num => num >= 0).reverse();
+    let neg = numArray.filter(num => num < 0).reverse();
 
     // Check if the lengths are within one of each other (even though I've re-read and you said to ignore this case oops).
     // If not throw some error
@@ -46,7 +46,7 @@ const altNumbers = (numArray) => {
     if (lengthDiff > 1) {
         throw new Error("The positive/negative numbers are imbalanced by more than 1.");
     }
-     
+
     // If there are more positives, start with positive.
     // If there are more negatives, start with negative.
     // If there equal we don't care, start with positive.
@@ -60,7 +60,7 @@ const altNumbers = (numArray) => {
             // Add an element from neg
             mergedArray.push(neg.pop());
         }
-        
+
         // Flip addPosNext to whatever it isn't
         addPosNext = !addPosNext;
     }
@@ -75,7 +75,7 @@ module.exports = { altNumbers } // Do not modify this line
 // ====================TESTS====================
 // Some tests to help you check your progress. Simply run your code with
 // node easy.js
-// If successful, no output should appear. If unsuccessful, you should see 
+// If successful, no output should appear. If unsuccessful, you should see
 // assertion errors being thrown.
 
 let array1 = [1, -3, -8, -5, 10]
