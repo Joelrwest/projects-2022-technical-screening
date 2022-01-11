@@ -30,62 +30,45 @@ var assert = require("assert")
 // Output numArray: []
 // Explanation: Empty array...
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
+// Note I've never used JavaScript before - I'm sure my style is massively off or something
+
 const altNumbers = (numArray) => {
-    // Note that I haven't even used JavaScript before - I'm sure my style is massively off or I've missed something
+    // Create two new arrays, one for positives and one for negatives.
+    // Make it in reverse order for later
+    const pos = numArray.filter(num => num >= 0).reverse();
+    const neg = numArray.filter(num => num < 0).reverse();
 
-    // Idea is to iterate through numArray add elements to two new arrays:
-    //  - One that has all the positive numbers + zero
-    //  - One that has all the negative numbers
-    let pos = [];
-    let neg = [];
-
-    // Iterate through numArray
-    for (let i = 0; i < numArray.length; i++) {
-        if (numArray[i] >= 0) {
-            // It's positive or zero, add to 'pos'
-            pos.push(numArray[i]);
-        } else {
-            // Must be negative if it gets here
-            neg.push(numArray[i]);
-        }
-    }
-
-    // Check if the lengths are within one of each other.
-    // If they're not, there's a problem since it's impossible for them to alternate -> throw some error
+    // Check if the lengths are within one of each other (even though I've re-read and you said to ignore this case oops).
+    // If not throw some error
     const lengthDiff = Math.abs(pos.length - neg.length);
     if (lengthDiff > 1) {
-        throw new Error("The positive/negative numbers are imbalanced by more than 1. #positives = " + String(pos.length) + ", #negatives = " + String(neg.length));
+        throw new Error("The positive/negative numbers are imbalanced by more than 1.");
     }
-
-    // Cool, it's a valid input.
-    
-    // If there are more positive numbers, we must start with a positive number.
-    // If there are more negative numbers, we must start with a negative number.
-    // If there are equal amounts of positive and negative numbers, we don't care which starts. Default to positive.    
-    let nextIsPos = (pos.length >= neg.length);
-
-    // Make a new, empty array and iterate through the pos and neg arrays
-    let ans = [];
-    let posCounter = 0;
-    let negCounter = 0;
-    while (ans.length != numArray.length) {
-        if (nextIsPos) {
-            // Add a positive
-            ans.push(pos[posCounter]);
-            posCounter++;
+     
+    // If there are more positives, start with positive.
+    // If there are more negatives, start with negative.
+    // If there equal we don't care, start with positive.
+    let mergedArray = [];
+    let addPosNext = (pos.length >= neg.length);
+    while (mergedArray.length != numArray.length) {
+        if (addPosNext) {
+            // Add an element from pos
+            mergedArray.push(pos.pop());
         } else {
-            // Add a negative
-            ans.push(neg[negCounter]);
-            negCounter++;
+            // Add an element from neg
+            mergedArray.push(neg.pop());
         }
         
-        // Flip nextIsPos to whatever it isn't
-        nextIsPos = !nextIsPos;
+        // Flip addPosNext to whatever it isn't
+        addPosNext = !addPosNext;
     }
 
-    // Yay done, return it
-    return ans;
+    return mergedArray
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////
 
 module.exports = { altNumbers } // Do not modify this line
 
@@ -143,18 +126,20 @@ for (let i = 0; i < array6.length; i++) {
     assert(array6[i] === answer6[i])
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+
 // My own tests that're built to fail.
 // Has unbalanced number of positives and negatives.
 let array7 = [5,-1,-2,-3,4,0,3,7]
 try {
     array7 = altNumbers(array7)
-} catch (error) {
-    console.log("As expected, altNumbers failed with error on array7. " + error + "\n");
+} catch (e) {
+    console.log("As expected, altNumbers failed with error on array7. " + e + "\n");
 }
 
 let array8 = [-5,9,-1,-2,-3,-4,0,3]
 try {
     array8 = altNumbers(array8)
-} catch (error) {
-    console.log("As expected, altNumbers failed with error on array8. " + error + "\n");
+} catch (e) {
+    console.log("As expected, altNumbers failed with error on array8. " + e + "\n");
 }
