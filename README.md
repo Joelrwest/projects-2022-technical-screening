@@ -1,11 +1,10 @@
-# projects-2022-technical-screening
+# Joel West CSESoc 2022 projects technical screening
 Easy and Hard technical screening for 2022 projects applications
 
-Application form: https://docs.google.com/forms/d/e/1FAIpQLSc0RFu0mFL_BIoOhdi3yr7qyxu6h32882_i3x2qHKOtablTgQ/viewform
+You'll have to install pyparsing if you don't already have it, sorry about that. Didn't realise it wasn't a standard library until afterwards.
 
-1. Fork this repo
-2. Follow instructions on application and inside files
-3. Upload to your own repo (please call it projects-2022-technical-screening) <-- MAKE SURE IT ISN'T SET TO PRIVATE
-4. Provide link to repo in application
+Command should just be 'pip install pyparsing' - I think that's what I used to install it.
 
-Good luck!
+If that doesn't work, here's the official website - https://pypi.org/project/pyparsing/
+
+I hope that works, if not contact me and I'll demonstrate it on my computer. Really put a lot of time into this and would hate for you not to see it working.

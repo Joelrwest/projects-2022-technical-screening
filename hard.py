@@ -1,10 +1,18 @@
-# Libraries used
+# You'll have to install pyparsing if you don't already have it, sorry about that.
+# Didn't realise it wasn't a standard library until afterwards.
+# 
+# Command should just be 'pip install pyparsing' - I think that's what I used to install it.
+# 
+# If that doesn't work, here's the official website - https://pypi.org/project/pyparsing/
+# 
+# I hope that works, if not contact me and I'll demonstrate it on my computer.
+# Really put a lot of time into this and would hate for you not to see it working.
 
+# Libraries used
 import json
-from operator import contains
-from posixpath import split
 import re
 from pyparsing import nestedExpr
+import test_hard
 
 # Determines if this string is a course code
 # Returns a bool
@@ -71,33 +79,6 @@ def clean_word_list(word_list):
             print(f"There is a problem, item = {item} is neither a list nor a string")
 
     return cleaned_list
-
-# Takes in a target course, gets the conditions in conditions.json,
-# deconstructs it into individual words and returns a cleaned
-# list of words. If brackets are present, the returned list will
-# represent this by having another list in it. See examples below for
-# more details about the brackets
-def get_target_conditions(target):
-    with open("./conditions.json") as f:
-        all_conditions = json.load(f)
-
-        # Get the target string and add brackets around it
-        # so we can use a library in a moment
-        target_condition = f"({all_conditions[target]})"
-        f.close()
-
-    # Use library function to split it up based on brackets
-    # This line is gross and unreadable. Basically it's using this library function
-    # to deconstruct the brackets and remove whitespace.
-    # For example, target_condition = '(COMP1511    or DPST1091 or COMP1911 or COMP1917)',
-    # target_as_words = ['COMP1511', 'or', 'DPST1091', 'or', 'COMP1911', 'or', 'COMP1917'].
-
-    # More complicated example with brackets, target_condition = (MATH1081 and ((COMP1531 or COMP2041) or (COMP1927 or COMP2521)))
-    # target_as_words = ['MATH1081', 'and', [['COMP1531', 'or', 'COMP2041'], 'or', ['COMP1927', 'or', 'COMP2521']]]
-    target_condition_words = nestedExpr('(',')').parseString(target_condition).asList()[0]
-
-    # Clean it up and return this list
-    return clean_word_list(target_condition_words)
 
 # Takes in a list of requirements and returns
 # the first faculty name it finds.
@@ -258,8 +239,6 @@ def satisfies_requirements(courses_done, requirements):
 
     return is_satisfied
 
-
-
 # Given a list of course codes a student has taken, return true if the target_course
 # can be unlocked by them.
 #
@@ -275,7 +254,27 @@ def satisfies_requirements(courses_done, requirements):
 # for now, and I assume that I could do all the work in satisfies_requirements and
 # create_boolean_list in a single loop, but couldn't get it to work???? Not sure why
 def is_unlocked(courses_list, target_course):
-    conditions = get_target_conditions(target_course)
+    with open("./conditions.json") as f:
+        all_conditions = json.load(f)
+
+        # Get the target string and add brackets around it
+        # so we can use a library in a moment
+        target_condition = f"({all_conditions[target_course]})"
+        f.close()
+
+    # Use library function to split it up based on brackets
+    # This line is gross and unreadable. Basically it's using this library function
+    # to deconstruct the brackets and remove whitespace. Brackets become nested lists.
+
+    # For example, target_condition = '(COMP1511    or DPST1091 or COMP1911 or COMP1917)',
+    # target_as_words = ['COMP1511', 'or', 'DPST1091', 'or', 'COMP1911', 'or', 'COMP1917'].
+
+    # More complicated example with brackets, target_condition = (MATH1081 and ((COMP1531 or COMP2041) or (COMP1927 or COMP2521)))
+    # target_as_words = ['MATH1081', 'and', [['COMP1531', 'or', 'COMP2041'], 'or', ['COMP1927', 'or', 'COMP2521']]]
+    target_condition_words = nestedExpr('(',')').parseString(target_condition).asList()[0]
+
+    # Clean it up
+    conditions = clean_word_list(target_condition_words)
 
     # Go through and check if we've satisfied each part.
     # If we are, replace it with True. If not, replace it with False.
@@ -284,6 +283,14 @@ def is_unlocked(courses_list, target_course):
 
 # For testing purposes
 if __name__ == '__main__':
+    test_hard.test_empty()
+    test_hard.test_single()
+    test_hard.test_compound()
+    test_hard.test_simple_uoc()
+    test_hard.test_annoying_uoc()
+    test_hard.test_cross_discipline()
+    print('Passes in built tests!')
+    print()
     with open("./conditions.json") as f:
         all_conditions = json.load(f)
 
