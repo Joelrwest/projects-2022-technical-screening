@@ -1,243 +1,256 @@
-"""
-Inside conditions.json, you will see a subset of UNSW courses mapped to their 
-corresponding text conditions. We have slightly modified the text conditions
-to make them simpler compared to their original versions.
+# Libraries used
 
-Your task is to complete the is_unlocked function which helps students determine 
-if their course can be taken or not. 
-
-We will run our hidden tests on your submission and look at your success rate.
-We will only test for courses inside conditions.json. We will also look over the 
-code by eye.
-
-NOTE: This challenge is EXTREMELY hard and we are not expecting anyone to pass all
-our tests. In fact, we are not expecting many people to even attempt this.
-For complete transparency, this is worth more than the easy challenge. 
-A good solution is favourable but does not guarantee a spot in Projects because
-we will also consider many other criteria.
-"""
 import json
+from operator import contains
 from posixpath import split
 import re
+from pyparsing import nestedExpr
 
 #--------------------------------------------------------------------------------------------
 
-def is_course_code(string):
+# Determines if this string is a course code
+# Returns a bool
+def is_course_code(word):
     # Try and match 4 letters followed by
     # 1 number between 1-9 (since course code can't be level 0) and then 
     # 3 more numbers
     p = re.compile(r"[A-Z]{4}[1-9][0-9]{3}")
-    return len(string) == 8 and bool(p.match(string))
+    return len(word) == 8 and bool(p.match(word))
 
-def is_faculty_code(string):
+# Determines if this string is a faculty code
+# Returns a bool
+def is_faculty_code(word):
     # Try and match 4 letters
     p = re.compile(r"[A-Z]{4}")
-    return len(string) == 4 and bool(p.match(string))
+    return len(word) == 4 and bool(p.match(word))
 
-def is_bad_course_code(string):
-    # Just figure out if it's meant to be a course code.
-    # What I mean by this is '4951' and '4952' are
-    # just written as numbers without the COMP bit
-
-    # How to do this properly??
+# Janky workaround for the requirement to COMP4952/4953, since the course
+# code doesn't have the faculty name with it
+def is_bad_course_code(word):
     p = re.compile(r"[1-9][0-9]{3}")
-    return len(string) == 4 and bool(p.match(string))
+    return len(word) == 4 and bool(p.match(word))
 
-def is_and(string):
-    return string == 'AND'
+# Decide if we want to prune this word from the condition list
+def wanted_word(word):
+    if word == 'OR' or word == 'AND':
+        # It's a condition, keep it
+        return True
+    elif is_course_code(word):
+        # It's a course code, keep it
+        return True
+    elif word.isdigit() or word == 'UNITS' or word == 'LEVEL' or is_faculty_code(word):
+        # It's needed for a UOC requirement, keep it
+        return True
+    else:
+        # Don't want it
+        return False
 
-def is_or(string):
-    return string == 'OR'
+# Cleans the word list by making everything uppercase, pruning
+# unwanted words and fixing bad course codes
+def clean_word_list(word_list):
+    # Is there a better way of doing this without a gross double loop?
+    # Problem is, I'm modifying this list within the loop and would
+    # have issues if I just got rid of the outermost while loop?
+    # Probably a better way... Had to do this same grossness later on as well
+    clean = False
+    while not clean:
+        clean = True
+        for i, item in enumerate(word_list):
+            if type(item) is str:
+                # It's a string, clean it up.
+                # For each word, only keep alphanumeric characters
+                word_list[i] = ''.join(filter(str.isalnum, word_list[i]))
+                word_list[i] = word_list[i].upper()
 
-def is_prereq(string):
-    # Just checks that the start of the string
-    # is 'PREREQ'
-    return string.find('PRE') == 0
+                # If it's just a course code written badly, ie without the
+                # faculty at the start like COMP or MATH, assume they meant
+                # to put COMP
+                if is_bad_course_code(word_list[i]):
+                    word_list[i] = 'COMP' + word_list[i]
 
-def string_to_words(string):
-    # Split the string into words
-    words = string.split(' ')
-
-    # For each word, only keep alphanumeric characters
-    for i in range(len(words)):
-        words[i] = ''.join(filter(str.isalnum, words[i]))
-        words[i] = words[i].upper()
-
-    # Filter out the empty words caused by multiple spaces in the original string
-    words = list(filter(lambda word: word != '', words))
+                # If it's the word prerequisite then remove it and skip
+                if not wanted_word(word_list[i]):
+                    # Remove the item if it's prereq
+                    word_list = word_list[:i] + word_list[i + 1:]
+                    clean = False
+                    break
+            else:
+                # It's a list, go deeper
+                word_list[i] = clean_word_list(item)
     
-    return words
+    return word_list
 
+# Takes in a target course, gets the conditions in conditions.json,
+# deconstructs it into individual words and returns a cleaned
+# list of words. If brackets are present, the returned list will
+# represent this by having another list in it. See examples below for
+# more details about the brackets
 def get_target_conditions(target):
     with open("./conditions.json") as f:
-        all_string_conditions = json.load(f)
-        target_string_conditions = all_string_conditions[target]
+        all_conditions = json.load(f)
+
+        # Get the target string and add brackets around it
+        # so we can use a library in a moment
+        target_condition = f"({all_conditions[target]})"
         f.close()
-
-    return string_to_words(target_string_conditions)
-
-def has_uoc_condition(conditions):
-    return 'UNITS' in conditions and ('OF' in conditions or 'OC' in conditions) and 'CREDIT' in conditions
-
-def split_on_ands(list):
-    split_list = []
-
-    while list.count('AND') != 0:
-        index = list.index('AND')
-        if list[:index] != []:
-            split_list.append(list[:index])
-        list = list[index + 1:]
-    split_list.append(list)
-
-    return split_list
-
-def are_all_course_codes(list):
-    for item in list:
-        if not is_course_code(item):
-            return False
     
-    return True
+    # Use library function to split it up based on brackets
+    # This line is gross and unreadable. Basically it's using this library function
+    # to deconstruct the brackets and remove whitespace.
+    # For example, target_condition = '(COMP1511    or DPST1091 or COMP1911 or COMP1917)',
+    # target_as_words = ['COMP1511', 'or', 'DPST1091', 'or', 'COMP1911', 'or', 'COMP1917'].
 
-def find_first_faculty(list):
-    for item in list:
-        if is_faculty_code(item):
-            return item
+    # More complicated example with brackets, target_condition = (MATH1081 and ((COMP1531 or COMP2041) or (COMP1927 or COMP2521)))
+    # target_as_words = ['MATH1081', 'and', [['COMP1531', 'or', 'COMP2041'], 'or', ['COMP1927', 'or', 'COMP2521']]]
+    target_condition_words = nestedExpr('(',')').parseString(target_condition).asList()[0]
 
-# Problem courses:
-# 2121
-# 3151
-# 3900?
-# 9417
+    # Clean it up and return this list
+    return clean_word_list(target_condition_words)
 
-def is_unlocked(courses_list, target_course):
-    """Given a list of course codes a student has taken, return true if the target_course 
-    can be unlocked by them.
-    
-    You do not have to do any error checking on the inputs and can assume that
-    the target_course always exists inside conditions.json
+# Takes in a list of requirements and returns
+# the first faculty name it finds.
+# If no faculty is found, None is returned
+def find_first_faculty(requirements):
+    for requirement in requirements:
+        if type(requirement) is str and is_faculty_code(requirement):
+            return requirement
 
-    You can assume all courses are worth 6 units of credit
-    """
+    return None
 
-    print(target_course)
-    conditions = get_target_conditions(target_course)
+# Takes in a list and returns True
+# if this list contains another list
+def contains_list(requirements):
+    for requirement in requirements:
+        if type(requirement) is list:
+            return True
 
-    # Get rid of the word prerequisite at the start
-    if len(conditions) > 0 and is_prereq(conditions[0]):
-        conditions = conditions[1:]
+def is_uoc_satisfied(courses_done, requirement):
+    # There are 4 cases
+    # - Simple min UOC requirement, e.g. ['102', 'UNITS']
+    # - Min UOC requirement in faculty e.g. ['36', 'UNITS', 'COMP']
+    # - Min UOC requirement in faculty with level x, e.g. ['18', 'UNITS', 'LEVEL', '2', 'COMP']
+    # - Min UOC requirement from a list of courses, e.g. ['12', 'UNITS', ['COMP6443', 'COMP6843', 'COMP6445', 'COMP6845', 'COMP6447']]
 
-    # For course codes that're just numbers, assume they mean COMP and fix them
-    for i, condition in enumerate(conditions):
-        if is_bad_course_code(condition):
-            conditions[i] = 'COMP' + condition
-    
-    # Check the UOC first
-    # There are 3 cases:
-    #  - Need some courses OR some amount of UOC
-    #  - Need some courses AND some amount of UOC
-    #  - Need some amount of UOC in a list
-    # COMP3900 [, 'AND', '102', 'UNITS', 'OF', 'CREDIT']
-    # COMP3901 ['12', 'UNITS', 'OF', 'CREDIT', 'IN', 'LEVEL', '1', 'COMP', 'COURSES', 'AND', '18', 'UNITS', 'OF', 'CREDIT', 'IN', 'LEVEL', '2', 'COMP', 'COURSES']
-    # COMP3902 [, 'AND', '12', 'UNITS', 'OF', 'CREDIT', 'IN', 'LEVEL', '3', 'COMP', 'COURSES']
-    # COMP4128 [, 'AND', '12', 'UNITS', 'OF', 'CREDIT', 'IN', 'LEVEL', '3', 'COMP', 'COURSES']
-    # COMP4161 ['COMPLETION', 'OF', '18', 'UNITS', 'OF', 'CREDIT']
-    # COMP4601 [, 'AND', 'COMPLETION', 'OF', '24', 'UNITS', 'OF', 'CREDIT']
-    # COMP4951 ['36', 'UNITS', 'OF', 'CREDIT', 'IN', 'COMP', 'COURSES']
-    # COMP9301 ['12', 'UNITS', 'OF', 'CREDIT', 'IN', 'COMP6443', 'COMP6843', 'COMP6445', 'COMP6845', 'COMP6447']
-    # COMP9302 [, 'AND', '12', 'UNITS', 'OF', 'CREDIT', 'IN', 'COMP6443', 'COMP6843', 'COMP6445', 'COMP6845', 'COMP6447']
-    # COMP9491 ['18', 'UNITS', 'OC', 'CREDIT', 'IN', 'COMP9417', 'COMP9418', 'COMP9444', 'COMP9447']
-    if has_uoc_condition(conditions):
-        lo_index = conditions.index('UNITS')
-        while lo_index != 0 and not is_course_code(conditions[lo_index - 1]):
-            lo_index -= 1
+    # First thing will always be a number of UOC
+    try:
+        uoc_required = int(requirement[0])
+    except:
+        print('Something went wrong, assume uoc_required is 0 as a bad fix')
+        uoc_required = 0
+
+    # Check what case it's in
+    faculty = find_first_faculty(requirement)    
+    uoc_done = 0
+    if len(requirement) == 2:
+        # Simple min UOC requirement, e.g. ['102', 'UNITS']
+        uoc_done = 6 * len(courses_done)
+    elif faculty != None:
+        # Min UOC requirement in faculty e.g. ['36', 'UNITS', 'COMP']
+        for course_done in courses_done:
+            if course_done[:4] == faculty:
+                uoc_done += 6
+    elif faculty != None and requirement.contains('LEVEL'):
+        # Min UOC requirement in faculty with level x, e.g. ['18', 'UNITS', 'LEVEL', '2', 'COMP']
+        level_index = requirement.index('LEVEL')
         
-        uoc_conditions = conditions[lo_index:]
-        uoc_requirements = split_on_ands(uoc_conditions)
+        # Assume the item after the word level is the level number we want
+        level_needed = int(requirement[level_index + 1])
+        for course_done in courses_done:
+            if course_done[:4] == faculty and int(course_done[4]) == level_needed:
+                uoc_done += 6
+    elif contains_list(requirement):
+        # Min UOC requirement from a list of courses, e.g. ['12', 'UNITS', ['COMP6443', 'COMP6843', 'COMP6445', 'COMP6845', 'COMP6447']]
+        possible_courses = requirement[-1]
+        for course in possible_courses:
+            if course in courses_done:
+                uoc_done += 6
+    else:
+        # Something went wrong ;_;
+        # For now, I've just made it print something but would probably raise some kind of
+        # exception handling if this was a real project
+        print(f"Something went wrong with requirement = {requirement}")
+    
+    return uoc_done >= uoc_required
 
-        # Remove the conditions relating to uoc now that we're done with it        
-        conditions = conditions[:lo_index]
+def satisfies_requirements(courses_done, requirements):    
+    if len(requirements) == 0:
+        return True
+    
+    everything_checked = False
+    while not everything_checked:
+        everything_checked = True
+        for i, item in enumerate(requirements):
+            if type(item) is str:
+                if item == 'OR' or item == 'AND':
+                    # Don't need to do anything to these for now
+                    continue
+                elif is_course_code(item):
+                    # Decide whether this item should be True or False.
+                    # True -> student has done this course.
+                    # False -> student hasn't done this course.
+                    requirements[i] = (item in courses_done)
+                else:
+                    # Must be some UOC requirement.
+                    # First thing is always the number of UOC, at least in examples given
+                    #uoc_required = int(item)
 
-        for requirement in uoc_requirements:
-            units_index = requirement.index('UNITS')
-            uoc_required = int(requirement[units_index - 1])
-            try:
-                in_index = requirement.index('IN')
-                after_in = requirement[in_index + 1:]
+                    # Need to figure out how long this UOC requirement is
+                    lo = i
+                    hi = lo
+                    while hi + 1 < len(requirements) and requirements[hi + 1] != 'OR' and requirements[hi + 1] != 'AND':
+                        hi += 1
+                    
+                    # Isolate just the UOC requirement bit to simplify
+                    uoc_requirement = requirements[lo:hi + 1]
 
-                # At this point, we know it specifies courses for the UOC requirement.
-                # This could either be of the form 'in level x COMP courses'
-                # or 'in <COURSE1>, <COURSE2>, ...'
-                uoc_in_requirement = 0
+                    # Figure out if this should be True or False
+                    requirements[hi] = is_uoc_satisfied(courses_done, uoc_requirement)
 
-                # Check if all the contents of after_in are course codes
-                if are_all_course_codes(after_in):
-                    for course_done in courses_list:
-                        if course_done in after_in:
-                            uoc_in_requirement += 6
-                else:                    
-                    # Count how many COMP courses in courses done.
-                    # Assumes that the courses_done is a valid list of courses
-                    if requirement.count('LEVEL') == 1:
-                        level_index = requirement.index('LEVEL')
-                        level_required = requirement[level_index - 1]
-
-                        for course_done in courses_list:
-                            if course_done[4] == level_required:
-                                uoc_in_requirement += 6
-                    else:
-                        faculty = find_first_faculty(requirement)
-
-                        for course_done in courses_list:
-                            if course_done[:4] == faculty:
-                                uoc_in_requirement += 6
-                if uoc_in_requirement < uoc_required:
-                    return False
-            except:
-                # There is no conditions saying 'IN' a specific
-                # list of courses or faculty. So just see if
-                # overall uoc > required uoc
-                if len(courses_list) * 6 < uoc_required:
-                    return False
-            
-    # Iterate through the conditions and make a kind of structure to show how these conditions
-    # fit together
-    requirements = []
-    #print(target_course)
-    #print(conditions)
-    #print()
-    first_code = True
-    for i, condition in enumerate(conditions):
-        # Check if it's a course code
-        if is_course_code(condition):
-            # Add the code to the requirements.
-            # The spot in which it goes depends on
-            # the previous condition. If the previous was 'OR',
-            # it goes on the same level as the previous code.
-            # If it's an 'AND', it goes on the next level.
-            # If this is the first code, start a level.            
-            if first_code or is_or(conditions[i - 1]):
-                # Add to this current level
-                if len(requirements) == 0:
-                    requirements.append([])
-                requirements[-1].append(condition)
-            elif is_and(conditions[i - 1]):
-                # Start a new level and add to it
-                requirements.append([condition])
-            
-            first_code = False
-        elif is_prereq(condition):
-            # Do nothing
+                    # Get rid of the wacky bits and break so that the enumeration doesn't break
+                    requirements = requirements[:lo] + requirements[hi:]
+                    everything_checked = False
+                    break
+            elif type(item) is bool:
+                # Do nothing
+                continue
+            else:
+                # It's a list, go deeper
+                requirements[i] = satisfies_requirements(courses_done, item)
+    
+    # Once we've gone through the entire list, decide if everything is satisfied or not
+    is_satisfied = requirements[0]
+    for i in range(0, len(requirements)):
+        if i % 2 == 0:
             continue
         
-    for requirement in requirements:
-        satisfied_requirement = False
-        for course_done in courses_list:
-            if course_done in requirement:
-                satisfied_requirement = True
-                break
-        if not satisfied_requirement:
-            return False
-    return True
+        # requirements[i] is either 'AND' or 'OR' since I'm only taking i to be odd
+        if requirements[i] == 'AND':
+            # Do an and with the next item
+            is_satisfied = is_satisfied and requirements[i + 1]
+        elif requirements[i] == 'OR':
+            # Do an or with the next item
+            is_satisfied = is_satisfied or requirements[i + 1]
+        else:
+            print(f"There is a problem. This item is {requirements[i]} i is {i}")
+    
+    return is_satisfied
+
+"""
+Given a list of course codes a student has taken, return true if the target_course 
+can be unlocked by them.
+
+You do not have to do any error checking on the inputs and can assume that
+the target_course always exists inside conditions.json
+
+You can assume all courses are worth 6 units of credit
+"""
+def is_unlocked(courses_list, target_course):
+    conditions = get_target_conditions(target_course)    
+
+    # Go through and check if we've satisfied each part.
+    # If we are, replace it with True. If not, replace it with False.
+    # This is recursive by the nature that I've set it up
+    return satisfies_requirements(courses_list, conditions)
 
 #--------------------------------------------------------------------------------------------
 
@@ -246,5 +259,5 @@ if __name__ == '__main__':
         all_conditions = json.load(f)
 
         for key in all_conditions.keys():
-            print(is_unlocked([], key))
+            print(f"{key}: {is_unlocked(['MATH1081'], key)}")
         f.close()
