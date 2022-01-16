@@ -10,7 +10,7 @@ from pyparsing import nestedExpr
 # Returns a bool
 def is_course_code(word):
     # Try and match 4 letters followed by
-    # 1 number between 1-9 (since course code can't be level 0) and then 
+    # 1 number between 1-9 (since course code can't be level 0) and then
     # 3 more numbers
     p = re.compile(r"[A-Z]{4}[1-9][0-9]{3}")
     return len(word) == 8 and bool(p.match(word))
@@ -69,7 +69,7 @@ def clean_word_list(word_list):
             cleaned_list.append(clean_word_list(item))
         else:
             print(f"There is a problem, item = {item} is neither a list nor a string")
-    
+
     return cleaned_list
 
 # Takes in a target course, gets the conditions in conditions.json,
@@ -85,7 +85,7 @@ def get_target_conditions(target):
         # so we can use a library in a moment
         target_condition = f"({all_conditions[target]})"
         f.close()
-    
+
     # Use library function to split it up based on brackets
     # This line is gross and unreadable. Basically it's using this library function
     # to deconstruct the brackets and remove whitespace.
@@ -132,7 +132,7 @@ def is_uoc_satisfied(courses_done, requirement):
         uoc_required = 0
 
     # Check what case it's in
-    faculty = find_first_faculty(requirement)    
+    faculty = find_first_faculty(requirement)
     uoc_done = 0
     if len(requirement) == 2:
         # Simple min UOC requirement, e.g. ['102', 'UNITS']
@@ -145,7 +145,7 @@ def is_uoc_satisfied(courses_done, requirement):
     elif faculty != None and requirement.count('LEVEL') != 0:
         # Min UOC requirement in faculty with level x, e.g. ['18', 'UNITS', 'LEVEL', '2', 'COMP']
         level_index = requirement.index('LEVEL')
-        
+
         # Assume the item after the word level is the level number we want
         try:
             level_needed = int(requirement[level_index + 1])
@@ -165,7 +165,7 @@ def is_uoc_satisfied(courses_done, requirement):
         # For now, I've just made it print something but would probably raise some kind of
         # exception handling if this was a real project
         print(f"Something went wrong with requirement = {requirement}")
-    
+
     return uoc_done >= uoc_required
 
 # Helper to decide if this index is the last index
@@ -178,11 +178,11 @@ def end_of_uoc_requirement(index, requirements):
 # -> bool on whether student satisfied UOC. If it's either 'AND' or 'OR', add them into the list
 # for later. If it's a nested list, sort that out first and it becomes a bool depending on
 # the contents of the list.
-def create_boolean_list(courses_done, requirements):    
+def create_boolean_list(courses_done, requirements):
     # Requirements looks something along the lines of this for example. This is COMP4601:
     # [['COMP2511', 'OR', 'COMP2911'], 'AND', '24', 'UNITS']
     # Nested list indicates brackets
-    
+
     # Create a new list and assume that everything hasn't been checked.
     # Each item in boolean_list will either be a bool (if the corresponding item in requirements
     # is either a course code or a UOC requirement of some sorts) or 'OR' or 'AND' (again, depending on what was
@@ -208,7 +208,7 @@ def create_boolean_list(courses_done, requirements):
                     lo = hi = i
                     while end_of_uoc_requirement(hi, requirements):
                         hi += 1
-                    
+
                     # Isolate just the UOC requirement bit to simplify
                     uoc_requirement = requirements[lo:hi + 1]
 
@@ -230,10 +230,10 @@ def create_boolean_list(courses_done, requirements):
 # on whether each requirement is satisfied. Then, after each course code/UOC requirement has been turned into bools,
 # it goes through and checks whether OVERALL the requirements are satisfied or not
 def satisfies_requirements(courses_done, requirements):
-    # If there are no requirements, must have met the requirements    
+    # If there are no requirements, must have met the requirements
     if len(requirements) == 0:
         return True
-    
+
     boolean_list = create_boolean_list(courses_done, requirements)
 
     # Once we've gone through the entire list, decide if everything is satisfied or not.
@@ -242,12 +242,10 @@ def satisfies_requirements(courses_done, requirements):
     # nested lists at this point since we've already dealt with them in the recursion of
     # create_boolean_list
     is_satisfied = boolean_list[0]
-    print(boolean_list)
-    print(requirements)
     for i, requirement in enumerate(boolean_list):
         if i % 2 == 0:
             continue
-        
+
         # requirement is either 'AND' or 'OR' since I'm only taking i to be odd
         if requirement == 'AND':
             # Do an and with the next item
@@ -257,17 +255,17 @@ def satisfies_requirements(courses_done, requirements):
             is_satisfied = is_satisfied or boolean_list[i + 1]
         else:
             print(f"There is a problem. This requirement = {requirement}, i = {i}")
-    
+
     return is_satisfied
 
 
 
-# Given a list of course codes a student has taken, return true if the target_course 
+# Given a list of course codes a student has taken, return true if the target_course
 # can be unlocked by them.
-# 
+#
 # You do not have to do any error checking on the inputs and can assume that
 # the target_course always exists inside conditions.json
-# 
+#
 # You can assume all courses are worth 6 units of credit
 #
 # I've also assumed course_list is formatted as a list or tuple I think would also work.
@@ -290,8 +288,6 @@ if __name__ == '__main__':
         all_conditions = json.load(f)
 
         for key in all_conditions.keys():
-            print(f"{key}: {is_unlocked(['MATH1081', 'MTRN3500', 'COMP1531', 'COMP6443',
-            'COMP2521', 'COMP9444', 'COMP2511', 'COMP2041',
-            'COMP3901', 'COMP3821', 'COMP1511', 'COMP1521'], key)}")
+            print(f"{key}: {is_unlocked(['MATH1081', 'MTRN3500', 'COMP1531', 'COMP6443', 'COMP2521', 'COMP9444', 'COMP2511', 'COMP2041', 'COMP3901', 'COMP3821', 'COMP1511', 'COMP1521'], key)}")
             print()
         f.close()
